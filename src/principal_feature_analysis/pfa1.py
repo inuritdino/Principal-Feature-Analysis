@@ -24,6 +24,10 @@ from random import sample, seed
 
 def test_data0(n=5000):
     # Everything is a function of everything. Nothing gets deleted by PFA.
+    # 1 -- 0
+    # |    |
+    # \   /
+    #   2
     A = 5*np.random.rand(n, 3)
 
     A[:, 1] = 0.6*A[:, 0] # proportional
@@ -31,7 +35,10 @@ def test_data0(n=5000):
     return A
 
 def test_data1(n=5000):
-    # Ex 3 from the paper
+    # Ex 3 from the paper, 0, 1 & 2 are independent
+    # 2 -- 3 -- 0
+    #      |    |
+    #      1 -- 4
     A = 5*np.random.rand(n, 5)
 
     A[:, 3] = 2*A[:, 0]*A[:, 1]*A[:, 2]
@@ -40,6 +47,7 @@ def test_data1(n=5000):
 
 def test_data2(n=5000):
     # Test data from the package: 0 & 1 are independent
+    # 2 -- 0 -- 3 -- 1 -- 4
     A=5*np.random.rand(n, 5)
 
     A[:,2]=A[:,0]*0.01 + 5
@@ -50,13 +58,28 @@ def test_data2(n=5000):
 
 def test_data3(n=5000):
     # Test data from the package: 0 & 1 are independent
+    # 2 -- 0
+    # 1 -- 3
+    # |_ 4_|
     A=5*np.random.rand(n, 5)
 
     A[:,2]=A[:,0]*0.01 + 5
     A[:,3]=A[:,1]**2
-    A[:,4]=np.exp(-A[:,1])
+    A[:,4]=np.exp(-A[:,1]) # via 1: 3 -- 4
 
     return A    
+
+def test_data4(n=5000):
+    # Two alternative splits of the graph: at 1 or 0
+    # 2 & 0 are independent
+    # 2 -- 1 -- 0 -- 3
+    #            \__ 4
+    A = 5*np.random.rand(n, 5)
+    A[:, 2] = A[:, 1]*14 + 0.01
+    A[:, 0] = A[:, 1]*A[:, 3]**2 + 10*np.exp(-A[:, 4])
+
+    return A
+
 
 def ex_cor_fun(x, y, alt='two-sided'):
     """Example of a custom correlation function which will work with
@@ -229,7 +252,7 @@ def pfa1(graph, rnd_state=None):
     list_nodes_complete_sub_graphs=[] # list of lists of nodes corresponding to the complete subgraphs of list_complete_sub_graphs
 
     # filter non-complete subgraphs
-    for i in sample(S, nS):
+    for i in sample(S, nS): # why sample? order of subgraphs to process is not important
         if list(nx.complement(i).edges)!=[]: # if a graph is not complete
             list_graphs_to_divide.append(i)
         else:
@@ -239,13 +262,15 @@ def pfa1(graph, rnd_state=None):
     # remove nodes from non-complete subgraphs until only complete subgraphs are left
 
     while list_graphs_to_divide!=[]:
-        print("Iteration: " + str(n_iter), end="\r")
+        #print("Iteration: " + str(n_iter), end="\r")
         # any_cluster_dissected=1
-        for current_graph in list_graphs_to_divide:
+        n_graphs_to_divide = len(list_graphs_to_divide)
+        # Randomization should be here (?)
+        for current_graph in sample(list_graphs_to_divide, n_graphs_to_divide):
             set_nodes_to_delete=nx.minimum_node_cut(current_graph)  # minimum cut algorithm
-            # print(str(len(set_nodes_to_delete)) + " node(s) removed:")
-            # print(set_nodes_to_delete)
-            # print(" from "+str(current_graph.nodes)+" graph nodes")
+            print(str(len(set_nodes_to_delete)) + " node(s) removed:")
+            print(set_nodes_to_delete)
+            print(" from "+str(current_graph.nodes)+" graph nodes")
             list_graphs_to_divide.remove(current_graph) # remove the dissected graph
             for node in list(set_nodes_to_delete):
                 current_graph.remove_node(node) # remove the minimum cut nodes
